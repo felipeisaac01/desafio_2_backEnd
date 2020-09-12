@@ -23,7 +23,7 @@ const produtosDisponiveis = [{
     nome: 'americano',
     quantidade: 30,
     valor: 550,
-    deletado: false
+    deletado: true
 },{
     id: 4,
     nome: 'cheeseburguer',
@@ -130,14 +130,14 @@ server.use(ctx => {
                 quantidade: parseInt(ctx.request.body.quantidade),
                 valor: parseInt(ctx.request.body.valor),
                 deletado: false
-            }
+            };
 
             produtosDisponiveis.push(novoProduto);
             ctx.status = 200;
             ctx.body = {
                 status: 'sucesso',
                 dados: novoProduto
-            }
+            };
         } else {
             ctx.status = 404;
             ctx.body = {
@@ -145,8 +145,57 @@ server.use(ctx => {
                 dados: {
                     mensagem: 'Caminho não encontrado'
                 }
-            }
-        }
+            };
+        };
+    } else if (method === "GET") {
+        if (path.includes('/products/:')) {
+            const id = parseInt(path.split('/:')[1]);
+
+            if (!(isNaN(id))) {
+                if (id < produtosDisponiveis.length + 1) {
+                    let produto = buscarProduto(id);
+
+                    if (!produto.deletado) {
+                        ctx.body = {
+                            status: 'sucesso',
+                            dados:produto
+                        }
+                    } else {
+                        ctx.status = 404;
+                        ctx.body = {
+                            status: 'error',
+                            dados: {
+                                mensagem: 'Produto deletado.'
+                            }
+                        }
+                    };
+                } else {
+                    ctx.status = 404;
+                    ctx.body = {
+                        status: 'error',
+                        dados: {
+                            mensagem: 'ID não existente'
+                        }
+                    }
+                }
+            } else {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inválido'
+                    },
+                };
+            };
+        } else {
+            ctx.status = 404;
+            ctx.body = ctx.body = {
+                status: 'error',
+                dados: {
+                    mensagem: 'Caminho não encontrado'
+                }
+            };
+        };
     } else {
         ctx.status = 404,
         ctx.body = {
@@ -154,8 +203,8 @@ server.use(ctx => {
             dados: {
                 mensagem: 'Método não encontrado.'
             }
-        }
-    }
+        };
+    };
 
 /* 
     const pedido = {
