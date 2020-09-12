@@ -117,6 +117,19 @@ const buscarProduto = (idProcurada) => {
     return produto
 };
 
+const testarID = (id) => {
+
+    
+    if (!(isNaN(id))) {
+        if (id < listaDeProdutos.length + 1) {
+            return id
+        } else {
+            return null
+        }
+    } else {
+        return false
+    }
+}
 
 server.use(ctx => {
     const path = ctx.url
@@ -149,11 +162,10 @@ server.use(ctx => {
         };
     } else if (method === "GET") {
         if (path.includes('/products/:')) {
-            const id = parseInt(path.split('/:')[1]);
-
-            if (!(isNaN(id))) {
-                if (id < listaDeProdutos.length + 1) {
-                    let produto = buscarProduto(id);
+            const id = testarID(parseInt(path.split('/:')[1]));
+                
+            if (typeof id === 'number') {
+                let produto = buscarProduto(id);
 
                     if (!produto.deletado) {
                         ctx.body = {
@@ -169,15 +181,14 @@ server.use(ctx => {
                             }
                         }
                     };
-                } else {
-                    ctx.status = 404;
-                    ctx.body = {
-                        status: 'error',
-                        dados: {
-                            mensagem: 'ID não existente'
-                        }
+            } else  if (id === null) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID não existente'
                     }
-                }
+                };
             } else {
                 ctx.status = 404;
                 ctx.body = {
@@ -186,7 +197,8 @@ server.use(ctx => {
                         mensagem: 'ID inválido'
                     },
                 };
-            };
+            }
+            
         } else if (path === '/products') {
             const produtosDisponiveis = []
             listaDeProdutos.forEach(produto => {
@@ -208,6 +220,56 @@ server.use(ctx => {
                 }
             };
         };
+    } else if (method === "PUT") {
+        if (path.includes('/products/:')) {
+            const id = testarID( parseInt( path.split('/:')[1] ) );
+
+            if (typeof id === 'number') {
+                const produto = buscarProduto(id);
+
+                if (!produto.deletado) {
+                    const dadoASerAtualizado = ctx.request.body.dadoASerAtualizado;
+                    const novoValor = ctx.request.body.novoValor;
+                    produto[dadoASerAtualizado] = novoValor;
+
+                    ctx.status = 200;
+                    ctx.body = {
+                        status: 'sucesso',
+                        dados: produto
+                    };
+                } else {
+                    ctx.status = 404;
+                    ctx.body = {
+                        status: 'error',
+                        mensagem: 'O produto foi deletado, não pode ser atualizado'
+                    }
+                }
+            } else if (id === null) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inexistente'
+                    }
+                };
+            } else {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inválido'
+                    }
+                };
+            };
+        } else {
+            ctx.status = 404;
+            ctx.body = {
+                status: 'error',
+                dados: {
+                    mensagem: 'Caminho não encontrado'
+                }
+            }
+        }
     } else {
         ctx.status = 404,
         ctx.body = {
