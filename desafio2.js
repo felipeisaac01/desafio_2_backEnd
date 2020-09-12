@@ -6,7 +6,7 @@ const server = new Koa();
 server.use(bodyparser());
 
 
-const produtosDisponiveis = [{
+const listaDeProdutos = [{
     id: 1,
     nome: 'coxinha',
     quantidade: 40,
@@ -15,7 +15,7 @@ const produtosDisponiveis = [{
 },{
     id: 2,
     nome: 'enroladinho',
-    quantidade: 20,
+    quantidade: 0,
     valor: 600,
     deletado: false
 },{
@@ -108,7 +108,7 @@ const calcularValorDoCarrinho = (carrinho) => {
 const buscarProduto = (idProcurada) => {
     let produto;
 
-    produtosDisponiveis.forEach(item => {
+    listaDeProdutos.forEach(item => {
         if (idProcurada === item.id) {
             produto = item;
         };
@@ -125,14 +125,14 @@ server.use(ctx => {
     if (method === 'POST') {   
         if (path === '/products') {
             const novoProduto = {                   // vou assumir que a verificacao dos dados seja feita no frontend
-                id: produtosDisponiveis.length + 1,
+                id: listaDeProdutos.length + 1,
                 nome: ctx.request.body.nome,
                 quantidade: parseInt(ctx.request.body.quantidade),
                 valor: parseInt(ctx.request.body.valor),
                 deletado: false
             };
 
-            produtosDisponiveis.push(novoProduto);
+            listaDeProdutos.push(novoProduto);
             ctx.status = 200;
             ctx.body = {
                 status: 'sucesso',
@@ -152,7 +152,7 @@ server.use(ctx => {
             const id = parseInt(path.split('/:')[1]);
 
             if (!(isNaN(id))) {
-                if (id < produtosDisponiveis.length + 1) {
+                if (id < listaDeProdutos.length + 1) {
                     let produto = buscarProduto(id);
 
                     if (!produto.deletado) {
@@ -187,6 +187,18 @@ server.use(ctx => {
                     },
                 };
             };
+        } else if (path === '/products') {
+            const produtosDisponiveis = []
+            listaDeProdutos.forEach(produto => {
+                if (!produto.deletado && produto.quantidade > 0) {
+                    produtosDisponiveis.push(produto)
+                }
+            });
+            ctx.status = 200,
+            ctx.body = {
+                status: 'sucesso',
+                dados: produtosDisponiveis,
+            }
         } else {
             ctx.status = 404;
             ctx.body = ctx.body = {
