@@ -1,0 +1,24 @@
+{
+  "name": "desafio_2_backEnd",
+  "version": "1.0.0",
+  "description": "",
+  "main": "desafio2.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/felipeisaac01/desafio_2_backEnd.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/felipeisaac01/desafio_2_backEnd/issues"
+  },
+  "homepage": "https://github.com/felipeisaac01/desafio_2_backEnd#readme",
+  "dependencies": {
+    "koa": "^2.13.0",
+    "koa-bodyparser": "^4.3.0"
+  }
+}
