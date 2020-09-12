@@ -243,7 +243,7 @@ server.use(ctx => {
                         status: 'error',
                         mensagem: 'O produto foi deletado, não pode ser atualizado'
                     }
-                }
+                };
             } else if (id === null) {
                 ctx.status = 404;
                 ctx.body = {
@@ -268,7 +268,46 @@ server.use(ctx => {
                 dados: {
                     mensagem: 'Caminho não encontrado'
                 }
-            }
+            };
+        };
+    } else if (method === 'DELETE') {
+        if (path.includes('/products/:')) {
+            const id = testarID( parseInt( path.split('/:')[1]))
+
+            if (typeof id === 'number') {
+                const produto = buscarProduto(id);
+                produto.deletado = true;
+
+                ctx.status = 200;
+                ctx.body = {
+                    status: 'sucesso',
+                    dados: produto,
+                };
+            } else if (id === null) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inexistente'
+                    }
+                };
+            } else {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inválido'
+                    }
+                };
+            };
+        } else {
+            ctx.status = 404;
+            ctx.body = {
+                status: 'error',
+                dados: {
+                    mensagem: 'Caminho não encontrado'
+                }
+            };
         }
     } else {
         ctx.status = 404,
