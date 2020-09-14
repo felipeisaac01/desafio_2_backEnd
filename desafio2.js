@@ -124,37 +124,48 @@ const calcularValorDoCarrinho = (carrinho) => {
 const buscarProduto = (idProcurada) => {
     let produto;
 
-    listaDeProdutos.forEach(item => {
-        if (idProcurada === item.id) {
-            produto = item;
-        };
-    });
-    return produto;
-};
-
-const testarID = (id) => {
-
-    
-    if (!(isNaN(id))) {
-        if (id < listaDeProdutos.length + 1) {
-            return id;
-        } else {
+    if (!isNaN(idProcurada)) {
+        if (idProcurada <= listaDeProdutos.length) {
+            listaDeProdutos.forEach(item => {
+                if (item.id === idProcurada) {
+                    produto = item;
+                };
+            });
+            return produto
+        } else {   
             return null;
-        }
+        };
     } else {
         return false;
-    };
+    }; 
+};
+
+const buscarPedido = (idProcurada) => {
+    let pedido;
+
+    if (!isNaN(idProcurada)) {
+        if (idProcurada <= historicoDePedidos.length) {
+            historicoDePedidos.forEach(item => {
+                if (item.id === idProcurada) {
+                    pedido = item;
+                };
+            });
+            return pedido;
+        } else {   
+            return null;
+        };
+    } else {
+        return false;
+    }; 
 };
 
 server.use(ctx => {
     const path = ctx.url;
     const method = ctx.method;
 
-
-
     if (method === 'POST') {   
         if (path === '/products') {
-            const novoProduto = {                   // vou assumir que a verificacao dos dados seja feita no frontend
+            const novoProduto = {                   // vou assumir que a verificacao dos dados seja feita no front end
                 id: listaDeProdutos.length + 1,
                 nome: ctx.request.body.nome,
                 quantidade: parseInt(ctx.request.body.quantidade),
@@ -193,15 +204,13 @@ server.use(ctx => {
         };
     } else if (method === "GET") {
         if (path.includes('/products/:')) {
-            const id = testarID(parseInt(path.split('/:')[1]));
-                
-            if (typeof id === 'number') {
-                let produto = buscarProduto(id);
+            const produto = buscarProduto(parseInt(path.split('/:')[1]))
 
+            if (typeof produto === 'object') {
                     if (!produto.deletado) {
                         ctx.body = {
                             status: 'sucesso',
-                            dados:produto
+                            dados: produto
                         };
                     } else {
                         ctx.status = 404;
@@ -212,7 +221,7 @@ server.use(ctx => {
                             }
                         };
                     };
-            } else  if (id === null) {
+            } else  if (/* id */ produto === null) {
                 ctx.status = 404;
                 ctx.body = {
                     status: 'error',
@@ -241,6 +250,33 @@ server.use(ctx => {
                 status: 'sucesso',
                 dados: produtosDisponiveis,
             };
+        } else if (path.includes('/orders/:')) {
+            const pedido = buscarPedido(parseInt(path.split('/:')[1]));
+            
+            if (pedido === null) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'Não existe pedido para a ID solicitada'
+                    }
+                };
+            } else if (!pedido) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'A ID não é válida'
+                    }
+                };
+            } else {
+                if (!pedido.deletado) {
+                    ctx.body = {
+                        status: 'sucesso',
+                        dados: pedido
+                    };
+                }; 
+            };
         } else {
             ctx.status = 404;
             ctx.body = ctx.body = {
@@ -252,7 +288,7 @@ server.use(ctx => {
         };
     } else if (method === "PUT") {
         if (path.includes('/products/:')) {
-            const id = testarID( parseInt( path.split('/:')[1] ) );
+            const id = testarIDProdutos( parseInt( path.split('/:')[1] ) );
 
             if (typeof id === 'number') {
                 const produto = buscarProduto(id);
@@ -302,7 +338,7 @@ server.use(ctx => {
         };
     } else if (method === 'DELETE') {
         if (path.includes('/products/:')) {
-            const id = testarID( parseInt( path.split('/:')[1]))
+            const id = testarIDProdutos( parseInt( path.split('/:')[1]))
 
             if (typeof id === 'number') {
                 const produto = buscarProduto(id);
@@ -348,17 +384,6 @@ server.use(ctx => {
             }
         };
     };
+});
 
-/* 
-    const pedido = {
-        id: historicoDePedidos.length + 1,
-        produtos: [],
-        estado: 'incompleto',
-        idCliente: 1,
-        deletado: false,
-        // valorTotal: calcularValorDoCarrinho(pedidos.produtos),
-    }; 
-*/
-})
-
-server.listen(8081, console.log('Servidor rodando sem problemas na porta 8081!'))
+server.listen(8081, console.log('Servidor rodando sem problemas na porta 8081!'));
