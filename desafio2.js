@@ -1,5 +1,6 @@
 const Koa = require('koa');
 const bodyparser = require('koa-bodyparser');
+const { createContext } = require('vm');
 
 const server = new Koa();
 
@@ -41,41 +42,41 @@ const listaDeProdutos = [{
 const historicoDePedidos = [{
     id: 1,
     produtos: [{
-        id: 1,
+        idDoProduto: 1,
         nome: 'coxinha',
         quantidade: 3,
         valor: 500
     },{
-        id: 2,
+        idDoProduto: 2,
         nome: 'enroladinho',
         quantidade: 5,
         valor: 600
     }],
-    estado: 'processando',
+    estado: 'incompleto',
     idCliente: 152,
     deletado: false,
     valorTotal: 4500
 },{
     id: 2,
     produtos: [{
-        id: 3,
+        idDoProduto: 3,
         nome: 'americano',
         quantidade: 2,
         valor: 550
     },{
-        id: 4,
+        idDoProduto: 4,
         nome: 'cheeseburguer',
         quantidade: 1,
         valor: 500,
     }],
-    estado: 'entregue',
+    estado: 'processando',
     idCliente: 152,
-    deletado: false,
+    deletado: true,
     valorTotal: 1600
 },{
     id: 3,
     produtos: [{
-        id: 1,
+        idDoProduto: 1,
         nome: 'coxinha',
         quantidade: 3,
         valor: 500
@@ -87,25 +88,73 @@ const historicoDePedidos = [{
 },{
     id: 4,
     produtos: [{
-        id: 1,
+        idDoProduto: 1,
         nome: 'coxinha',
         quantidade: 3,
         valor: 500
     },{
-        id: 2,
+        idDoProduto: 2,
         nome: 'enroladinho',
         quantidade: 3,
         valor: 600,
     },{
-        id: 4,
+        idDoProduto: 4,
         nome: 'cheeseburguer',
         quantidade: 3,
         valor: 500
     }],
-    estado: 'pago',
+    estado: 'enviado',
     idCliente: 152,
     deletado: false,
     valorTotal: 4800
+},{
+    id: 5,
+    produtos: [{
+        idDoProduto: 1,
+        nome: 'coxinha',
+        quantidade: 50,
+        valor: 500
+    }],
+    estado: 'entregue',
+    idCliente: 152,
+    deletado: false,
+    valorTotal: 1500
+},{
+    id: 6,
+    produtos: [{
+        idDoProduto: 1,
+        nome: 'coxinha',
+        quantidade: 70,
+        valor: 500
+    }],
+    estado: 'cancelado',
+    idCliente: 152,
+    deletado: true,
+    valorTotal: 1500
+},{
+    id: 7,
+    produtos: [{
+        idDoProduto: 1,
+        nome: 'coxinha',
+        quantidade: 15,
+        valor: 500
+    }],
+    estado: 'processando',
+    idCliente: 152,
+    deletado: false,
+    valorTotal: 1500
+},{
+    id: 8,
+    produtos: [{
+        idDoProduto: 1,
+        nome: 'coxinha',
+        quantidade: 10,
+        valor: 500
+    }],
+    estado: 'cancelado',
+    idCliente: 152,
+    deletado: false,
+    valorTotal: 1500
 }];
 
 const calcularValorDoCarrinho = (carrinho) => {
@@ -139,6 +188,32 @@ const buscarProduto = (idProcurada) => {
         return false;
     }; 
 };
+
+const filtrarPedidos = (query) => {
+    const listaFiltrada = [];
+    const status = query.status
+
+    if (status === 'incompleto' || status === 'processando' || status === 'pago' || status === 'enviado' || status === 'entregue' || status === 'cancelado') {
+        if (status === 'todos') {
+            historicoDePedidos.forEach(item => {
+                if (!item.deletado) {
+                    listaFiltrada.push(item);
+                };
+            });
+        } else {
+            historicoDePedidos.forEach(item => {
+                if (!item.deletado && item.estado === status) {
+                    listaFiltrada.push(item);
+                };
+            });
+        };
+        return listaFiltrada;
+    } else {
+        return false; 
+    }
+
+   
+}
 
 const buscarPedido = (idProcurada) => {
     let pedido;
@@ -252,7 +327,7 @@ server.use(ctx => {
             };
         } else if (path.includes('/orders/:')) {
             const pedido = buscarPedido(parseInt(path.split('/:')[1]));
-            
+
             if (pedido === null) {
                 ctx.status = 404;
                 ctx.body = {
@@ -270,12 +345,38 @@ server.use(ctx => {
                     }
                 };
             } else {
-                if (!pedido.deletado) {
+                ctx.body = {
+                    status: 'sucesso',
+                    dados: pedido
+                };
+            };
+        } else if (path.includes('/orders?')) {
+            const query = ctx.query;
+            const listaFiltrada = filtrarPedidos(query);
+
+            if (!listaFiltrada) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'O status procurado é inválido'
+                    }
+                }
+            } else {
+                if (listaFiltrada.length > 0) {
                     ctx.body = {
-                        status: 'sucesso',
-                        dados: pedido
+                        status: 'Sucesso',
+                        dados: listaFiltrada
+                    }
+                } else {
+                    ctx.status = 404;
+                    ctx.body = {
+                        status: 'error',
+                        dados: {
+                            mensagem: 'Não existem pedidos com este status.'
+                        }
                     };
-                }; 
+                };
             };
         } else {
             ctx.status = 404;
