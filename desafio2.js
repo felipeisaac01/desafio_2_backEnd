@@ -42,10 +42,14 @@ const historicoDePedidos = [{
     id: 1,
     produtos: [{
         id: 1,
-        quantidade: 3
+        nome: 'coxinha',
+        quantidade: 3,
+        valor: 500
     },{
         id: 2,
-        quantidade: 5
+        nome: 'enroladinho',
+        quantidade: 5,
+        valor: 600
     }],
     estado: 'processando',
     idCliente: 152,
@@ -55,10 +59,14 @@ const historicoDePedidos = [{
     id: 2,
     produtos: [{
         id: 3,
-        quantidade: 2
+        nome: 'americano',
+        quantidade: 2,
+        valor: 550
     },{
         id: 4,
-        quantidade: 1
+        nome: 'cheeseburguer',
+        quantidade: 1,
+        valor: 500,
     }],
     estado: 'entregue',
     idCliente: 152,
@@ -68,7 +76,9 @@ const historicoDePedidos = [{
     id: 3,
     produtos: [{
         id: 1,
-        quantidade: 3
+        nome: 'coxinha',
+        quantidade: 3,
+        valor: 500
     }],
     estado: 'pago',
     idCliente: 152,
@@ -78,19 +88,25 @@ const historicoDePedidos = [{
     id: 4,
     produtos: [{
         id: 1,
-        quantidade: 3
+        nome: 'coxinha',
+        quantidade: 3,
+        valor: 500
     },{
         id: 2,
-        quantidade: 3
+        nome: 'enroladinho',
+        quantidade: 3,
+        valor: 600,
     },{
         id: 4,
-        quantidade: 3
+        nome: 'cheeseburguer',
+        quantidade: 3,
+        valor: 500
     }],
     estado: 'pago',
     idCliente: 152,
     deletado: false,
     valorTotal: 4800
-}]
+}];
 
 const calcularValorDoCarrinho = (carrinho) => {
     console.log(carrinho)
@@ -102,8 +118,8 @@ const calcularValorDoCarrinho = (carrinho) => {
         valor += item.quantidade * produto.valor;
     }
 
-    return valor    
-}
+    return valor;    
+};
 
 const buscarProduto = (idProcurada) => {
     let produto;
@@ -113,8 +129,7 @@ const buscarProduto = (idProcurada) => {
             produto = item;
         };
     });
-
-    return produto
+    return produto;
 };
 
 const testarID = (id) => {
@@ -122,18 +137,20 @@ const testarID = (id) => {
     
     if (!(isNaN(id))) {
         if (id < listaDeProdutos.length + 1) {
-            return id
+            return id;
         } else {
-            return null
+            return null;
         }
     } else {
-        return false
-    }
-}
+        return false;
+    };
+};
 
 server.use(ctx => {
-    const path = ctx.url
+    const path = ctx.url;
     const method = ctx.method;
+
+
 
     if (method === 'POST') {   
         if (path === '/products') {
@@ -150,6 +167,20 @@ server.use(ctx => {
             ctx.body = {
                 status: 'sucesso',
                 dados: novoProduto
+            };
+        } else if (path === '/orders') {
+            const novoPedido = {
+                id: historicoDePedidos.length + 1,
+                produtos: [],
+                estado: 'incompleto',
+                idCliente: Math.floor(Math.random() * 100).toString(),
+                deletado: false,
+            }
+
+            historicoDePedidos.push(novoPedido),
+            ctx.body = {
+                status: 'sucesso',
+                dados: novoPedido
             };
         } else {
             ctx.status = 404;
@@ -171,7 +202,7 @@ server.use(ctx => {
                         ctx.body = {
                             status: 'sucesso',
                             dados:produto
-                        }
+                        };
                     } else {
                         ctx.status = 404;
                         ctx.body = {
@@ -179,7 +210,7 @@ server.use(ctx => {
                             dados: {
                                 mensagem: 'Produto deletado.'
                             }
-                        }
+                        };
                     };
             } else  if (id === null) {
                 ctx.status = 404;
@@ -197,8 +228,7 @@ server.use(ctx => {
                         mensagem: 'ID inválido'
                     },
                 };
-            }
-            
+            };
         } else if (path === '/products') {
             const produtosDisponiveis = []
             listaDeProdutos.forEach(produto => {
@@ -210,7 +240,7 @@ server.use(ctx => {
             ctx.body = {
                 status: 'sucesso',
                 dados: produtosDisponiveis,
-            }
+            };
         } else {
             ctx.status = 404;
             ctx.body = ctx.body = {
@@ -308,7 +338,7 @@ server.use(ctx => {
                     mensagem: 'Caminho não encontrado'
                 }
             };
-        }
+        };
     } else {
         ctx.status = 404,
         ctx.body = {
