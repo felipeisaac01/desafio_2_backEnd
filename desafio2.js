@@ -1,6 +1,5 @@
 const Koa = require('koa');
 const bodyparser = require('koa-bodyparser');
-const { createContext } = require('vm');
 
 const server = new Koa();
 
@@ -41,21 +40,11 @@ const listaDeProdutos = [{
 
 const historicoDePedidos = [{
     id: 1,
-    produtos: [{
-        idDoProduto: 1,
-        nome: 'coxinha',
-        quantidade: 3,
-        valor: 500
-    },{
-        idDoProduto: 2,
-        nome: 'enroladinho',
-        quantidade: 5,
-        valor: 600
-    }],
+    produtos: [],
     estado: 'incompleto',
     idCliente: 152,
     deletado: false,
-    valorTotal: 4500
+    valorTotal: 0
 },{
     id: 2,
     produtos: [{
@@ -118,7 +107,7 @@ const historicoDePedidos = [{
     estado: 'entregue',
     idCliente: 152,
     deletado: false,
-    valorTotal: 1500
+    valorTotal: 25000
 },{
     id: 6,
     produtos: [{
@@ -130,7 +119,7 @@ const historicoDePedidos = [{
     estado: 'cancelado',
     idCliente: 152,
     deletado: true,
-    valorTotal: 1500
+    valorTotal: 35000
 },{
     id: 7,
     produtos: [{
@@ -142,7 +131,7 @@ const historicoDePedidos = [{
     estado: 'processando',
     idCliente: 152,
     deletado: false,
-    valorTotal: 1500
+    valorTotal: 7500
 },{
     id: 8,
     produtos: [{
@@ -154,20 +143,18 @@ const historicoDePedidos = [{
     estado: 'cancelado',
     idCliente: 152,
     deletado: false,
-    valorTotal: 1500
+    valorTotal: 5000
 }];
 
-const calcularValorDoCarrinho = (carrinho) => {
-    console.log(carrinho)
+const calcularValorDoCarrinho = (pedido) => {
+    const carrinho = pedido.produtos;
     let valor = 0;
-    let produto;
 
-    for (item of carrinho) {
-        produto = buscarProduto(item.id);
-        valor += item.quantidade * produto.valor;
-    }
+    carrinho.forEach(produto => {
+        valor += produto.quantidade*produto.valor
+    })
 
-    return valor;    
+    return valor;
 };
 
 const buscarProduto = (idProcurada) => {
@@ -193,7 +180,7 @@ const filtrarPedidos = (query) => {
     const listaFiltrada = [];
     const status = query.status
 
-    if (status === 'incompleto' || status === 'processando' || status === 'pago' || status === 'enviado' || status === 'entregue' || status === 'cancelado') {
+    if (status === 'incompleto' || status === 'processando' || status === 'pago' || status === 'enviado' || status === 'entregue' || status === 'cancelado' || status === 'todos') {
         if (status === 'todos') {
             historicoDePedidos.forEach(item => {
                 if (!item.deletado) {
@@ -232,6 +219,61 @@ const buscarPedido = (idProcurada) => {
     } else {
         return false;
     }; 
+};
+
+const adicionarProdutoAoPedido = (pedido, idProduto, quantidade) => {
+    const produto = buscarProduto(idProduto);
+
+    if (!produto) {
+        return false
+    } else {
+        if (!produto.deletado && quantidade <= produto.quantidade) {
+            let existente = false;
+            for (let x = 0; x < pedido.produtos.length; x++) {
+                if (pedido.produtos[x].id === idProduto) {
+                    existente = true;
+                    pedido.produtos[x].quantidade += quantidade;
+                    produto.quantidade -= quantidade;
+                };
+            };
+
+            if (!existente) {
+                const produtoAserAdicionado = {
+                    id: produto.id,
+                    nome: produto.nome,
+                    quantidade,
+                    valor: produto.valor
+                }; 
+                pedido.produtos.push(produtoAserAdicionado);
+            };
+            pedido.valorTotal = calcularValorDoCarrinho(pedido)
+            return true;
+        } else {
+            return null
+        }
+    };
+};
+
+const retirarProdutoDoPedido = (pedido, idProduto, quantidade) => {
+    const produto = buscarProduto(idProduto);
+
+    if (!produto) {
+        return false
+    } else {
+        for (x = 0; x < pedido.produtos.length; x++) {
+            if (pedido.produtos[x].id === idProduto) {
+                if (pedido.produtos[x].quantidade <= quantidade) {
+                    produto.quantidade += pedido.produtos[x].quantidade;
+                    pedido.produtos.splice(x, 1);
+                } else {
+                    produto.quantidade += quantidade;
+                    pedido.produtos[x].quantidade -= quantidade;
+                };
+            };
+        };
+        calcularValorDoCarrinho(pedido);
+        return true;
+    };
 };
 
 server.use(ctx => {
@@ -296,7 +338,7 @@ server.use(ctx => {
                             }
                         };
                     };
-            } else  if (/* id */ produto === null) {
+            } else  if (produto === null) {
                 ctx.status = 404;
                 ctx.body = {
                     status: 'error',
@@ -389,11 +431,25 @@ server.use(ctx => {
         };
     } else if (method === "PUT") {
         if (path.includes('/products/:')) {
-            const id = testarIDProdutos( parseInt( path.split('/:')[1] ) );
+            const produto = buscarProduto(parseInt( path.split('/:')[1]));
 
-            if (typeof id === 'number') {
-                const produto = buscarProduto(id);
-
+            if (!produto) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inválido'
+                    }
+                };
+            } else if (produto === null) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inexistente'
+                    }
+                };
+            } else {
                 if (!produto.deletado) {
                     const dadoASerAtualizado = ctx.request.body.dadoASerAtualizado;
                     const novoValor = ctx.request.body.novoValor;
@@ -411,21 +467,107 @@ server.use(ctx => {
                         mensagem: 'O produto foi deletado, não pode ser atualizado'
                     }
                 };
-            } else if (id === null) {
+            }
+
+            
+        } else if (path.includes('/orders/:')) {
+            const pedido = buscarPedido(parseInt(path.split('/:')[1]));
+
+            if (!pedido) {
                 ctx.status = 404;
                 ctx.body = {
                     status: 'error',
                     dados: {
-                        mensagem: 'ID inexistente'
+                        mensagem: 'ID do pedido é inválida'
                     }
                 };
-            } else {
+            } else  if (pedido === null) {
                 ctx.status = 404;
                 ctx.body = {
                     status: 'error',
                     dados: {
-                        mensagem: 'ID inválido'
+                        mensagem: 'ID do pedido é inexistente'
                     }
+                };
+            } else {    
+                if (ctx.request.body.dadoASerAtualizado === 'estado') { 
+                    if (pedido.estado === 'incompleto' && pedido.produtos.length === 0) {
+                        ctx.status = 404;  // esse codigo ta errado!
+                        ctx.body = {
+                            status: 'error',
+                            dados: {
+                                mensagem: 'o carrinho está vazio, não é possível atualizar o estado do pedido.'
+                            }
+                        };
+                    } else {
+                        pedido[ctx.request.body.dadoASerAtualizado] = ctx.request.body.novoValor;
+                        ctx.body = {
+                            status: 'sucesso',
+                            dados: pedido
+                        }
+                    };
+                } else if (ctx.request.body.dadoASerAtualizado === 'produtos') {
+                    if (pedido.estado === 'incompleto' && !pedido.deletado) {
+                        if (ctx.request.body.acao === 'adicionar') {
+                            const adicao = adicionarProdutoAoPedido(pedido, parseInt(ctx.request.body.idDoProduto), parseInt(ctx.request.body.quantidade))
+
+                            if (adicao) {
+                                ctx.body = {
+                                    status: 'sucesso',
+                                    dados: pedido
+                                };
+                            } else if (adicao === null) {
+                                ctx.status = 403;
+                                ctx.body = {
+                                    status: 'error',
+                                    dados: {
+                                        mensagem: 'Este produto não pode ser adicionado'
+                                    }
+                                }
+                            } else {
+                                ctx.status = 404;
+                                ctx.body = {
+                                    status: 'error',
+                                    dados: {
+                                        mensagem: 'Produto não encontrado'
+                                    }
+                                } 
+                            }
+                        } else if (ctx.request.body.acao === 'retirar') {
+                            const retirada = retirarProdutoDoPedido(pedido, parseInt(ctx.request.body.idDoProduto), ctx.request.body.quantidade);
+
+                            if (!retirada) {
+                                ctx.status = 403;
+                                ctx.body = {
+                                    status: 'error',
+                                    dados: {
+                                        mensagem: 'produto não encontrado.'
+                                    }
+                                } 
+                            } else {
+                                ctx.body = {
+                                    status: 'sucesso',
+                                    dados: pedido
+                                };
+                            };
+                        };
+                    } else {
+                        ctx.status = 404; // esse status ta erradooo
+                        ctx.body = {
+                            status: 'error',
+                            dados: {
+                                mensagem: 'Não é mais permitido adicionar produtos neste pedido.'
+                            }
+                        };
+                    };
+                } else if (ctx.request.body.dadoASerAtualizado === 'id' || ctx.request.body.dadoASerAtualizado === 'idCliente' || ctx.request.body.dadoASerAtualizado === 'deletado' || corpoAtualizacao.dadoASerAtualizado === 'valorTotal') {
+                    ctx.status = 404; // ta erradooo
+                    ctx.body = {
+                        status: 'error',
+                        dados: {
+                            mensagem: 'Este dado não pode ser atualizado.'
+                        }
+                    };
                 };
             };
         } else {
@@ -439,18 +581,17 @@ server.use(ctx => {
         };
     } else if (method === 'DELETE') {
         if (path.includes('/products/:')) {
-            const id = testarIDProdutos( parseInt( path.split('/:')[1]))
+            const produto = buscarProduto(parseInt( path.split('/:')[1]))
 
-            if (typeof id === 'number') {
-                const produto = buscarProduto(id);
-                produto.deletado = true;
-
-                ctx.status = 200;
+            if (!produto) {
+                ctx.status = 404;
                 ctx.body = {
-                    status: 'sucesso',
-                    dados: produto,
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inválido'
+                    }
                 };
-            } else if (id === null) {
+            } else if (produto === null) {
                 ctx.status = 404;
                 ctx.body = {
                     status: 'error',
@@ -459,6 +600,18 @@ server.use(ctx => {
                     }
                 };
             } else {
+                produto.deletado = true;
+
+                ctx.status = 200;
+                ctx.body = {
+                    status: 'sucesso',
+                    dados: produto,
+                };
+            }
+        } else if (path.includes('/orders/:')) {
+            const pedido = buscarPedido(parseInt(path.split('/:')[1]))
+
+            if (!pedido) {
                 ctx.status = 404;
                 ctx.body = {
                     status: 'error',
@@ -466,6 +619,21 @@ server.use(ctx => {
                         mensagem: 'ID inválido'
                     }
                 };
+            } else if (pedido === null) {
+                ctx.status = 404;
+                ctx.body = {
+                    status: 'error',
+                    dados: {
+                        mensagem: 'ID inexistente'
+                    }
+                };
+            } else {
+                pedido.deletado = true;
+
+                ctx.body = {
+                    status: 'sucesso',
+                    dados: pedido
+                }
             };
         } else {
             ctx.status = 404;
@@ -487,4 +655,4 @@ server.use(ctx => {
     };
 });
 
-server.listen(8081, console.log('Servidor rodando sem problemas na porta 8081!'));
+server.listen(8081, console.log('Servidor rodando sem problemas na porta 8081!')); 
