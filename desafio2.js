@@ -323,6 +323,7 @@ server.use(ctx => {
         if (path.includes('/products/:')) {
             const produto = buscarProduto(parseInt(path.split('/:')[1]))
 
+            
             if (typeof produto === 'object') {
                     if (!produto.deletado) {
                         ctx.body = {
