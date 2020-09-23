@@ -18,9 +18,9 @@ const historicoDePedidos = [{
         quantidade: 1,
         preco: 200,
     }],
-    estado: 'processando',
+    estado: 'incompleto',
     idDoCliente: 152,
-    deletado: true,
+    deletado: false,
     precoTotal: 440
 },{
     id: 3,
@@ -70,7 +70,7 @@ const historicoDePedidos = [{
     precoTotal: 7500
 },{
     id: 6,
-    product: [{
+    produtos: [{
         idDoProduto: 1,
         nome: 'caneta',
         quantidade: 70,
